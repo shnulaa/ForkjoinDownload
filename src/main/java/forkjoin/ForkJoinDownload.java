@@ -41,7 +41,7 @@ public final class ForkJoinDownload {
 	/** ForkJoinPool pool size **/
 	private static final int POOL_SIZE = 15;
 	/** the default forkJoin thresholds **/
-	private static final long THRESHOLDS = (1024 * 512); // 1M
+	private static final long THRESHOLDS = (1024 * 1024 * 10); // 1M
 	/** one thread download connection timeout **/
 	private static final int THREAD_DOWNLOAD_TIMEOUT = 30000;
 	/** one thread download max retry count **/
@@ -50,6 +50,7 @@ public final class ForkJoinDownload {
 	private static final Manager m = Manager.getInstance();
 	/** is the mode recovery **/
 	private static volatile boolean recovery = false;
+	private static boolean useHeader = false;
 
 	/**
 	 * main
@@ -58,14 +59,15 @@ public final class ForkJoinDownload {
 	 * @throws Throwable
 	 */
 	public static void main(String[] args) throws Throwable {
-		if (args == null || args.length != 3) {
+		if (args == null || args.length < 3) {
 			System.err.println("argument error..");
-			System.err.println("usage: java -jar [XX.jar] [downloadUrl] [threadNumber] [savedPath]");
+			System.err.println(
+					"usage: java -jar [XX.jar] [downloadUrl] [threadNumber] [savedPath] [savedName] [use header]");
 			return;
 		}
 
 		if (args[0] == null || args[0].isEmpty()) {
-			System.err.println("the download url must be specified..");
+			System.err.println("the download url must specified..");
 			return;
 		}
 		final String downloadURL = args[0];
@@ -82,18 +84,31 @@ public final class ForkJoinDownload {
 			savedPath = args[2];
 		}
 
+		String fileName = downloadURL.substring(downloadURL.lastIndexOf("/") + 1);
+		if (args[3] != null || !args[3].isEmpty()) {
+			fileName = args[3];
+		}
+
+		if (args.length > 3 && (args[4] != null || !args[4].isEmpty())) {
+			useHeader = true;
+		}
+
 		final URL url = new URL(downloadURL);
 		HttpURLConnection.setFollowRedirects(true);
 
-		URLConnection con = null;
+		URLConnection connection = null;
 		try {
-			con = url.openConnection();
-			if (con instanceof HttpURLConnection) {
 
-				int code = ((HttpURLConnection) con).getResponseCode();
+			connection = url.openConnection();
+			if (connection instanceof HttpURLConnection) {
+				if (useHeader) {
+					addHeader(connection);
+				}
+
+				int code = ((HttpURLConnection) connection).getResponseCode();
 				System.out.println("response code: " + code);
 
-				final long size = ((HttpURLConnection) con).getContentLength();
+				final long size = ((HttpURLConnection) connection).getContentLength();
 				System.out.println("remote file content size:" + size);
 
 				if (size <= 0) {
@@ -101,7 +116,6 @@ public final class ForkJoinDownload {
 					return;
 				}
 
-				String fileName = downloadURL.substring(downloadURL.lastIndexOf("/") + 1);
 				String fullPath = savedPath + fileName;
 				if (!savedPath.endsWith(File.separator)) {
 					fullPath = savedPath + File.separator + fileName;
@@ -143,9 +157,9 @@ public final class ForkJoinDownload {
 				System.err.println("The destination url http connection is not support.");
 			}
 		} finally {
-			if (con instanceof HttpURLConnection) {
-				if (con != null)
-					((HttpURLConnection) con).disconnect();
+			if (connection instanceof HttpURLConnection) {
+				if (connection != null)
+					((HttpURLConnection) connection).disconnect();
 			} else {
 				System.err.println("connection is not the instance of HttpURLConnection..");
 			}
@@ -219,9 +233,14 @@ public final class ForkJoinDownload {
 			int retryCount = 0;
 			while (retryCount++ < THREAD_MAX_RETRY_COUNT) {
 				HttpURLConnection con = null;
+				HttpURLConnection.setFollowRedirects(true);
 				try {
 
 					con = (HttpURLConnection) url.openConnection();
+
+					if (useHeader) {
+						addHeader(con);
+					}
 					con.setReadTimeout(THREAD_DOWNLOAD_TIMEOUT);
 					con.setConnectTimeout(THREAD_DOWNLOAD_TIMEOUT);
 
@@ -231,7 +250,10 @@ public final class ForkJoinDownload {
 					}
 					// System.out.println("bytes=" + getCurrent() + "-" + end);
 					con.setRequestProperty("Range", "bytes=" + getCurrent() + "-" + end);
-
+					// System.out.println("Thread name:" +
+					// Thread.currentThread().getName() + ", Ready to get
+					// bytes="
+					// + getCurrent() + "-" + end);
 					try (BufferedInputStream bis = new BufferedInputStream(con.getInputStream());
 							RandomAccessFile file = new RandomAccessFile(dFile, "rw");) {
 						file.seek(getCurrent());
@@ -243,6 +265,10 @@ public final class ForkJoinDownload {
 							current.getAndAdd(readed);
 							m.alreadyRead.getAndAdd(readed);
 						}
+						// System.out.println("Thread name:" +
+						// Thread.currentThread().getName() + ", end to get
+						// bytes="
+						// + getCurrent() + "-" + end);
 						// if write file successfully
 						break;
 					} catch (Exception e) {
@@ -424,6 +450,19 @@ public final class ForkJoinDownload {
 			bar.append("]");
 			return bar.toString();
 		}
+	}
+
+	private static void addHeader(URLConnection connection) {
+		connection.setRequestProperty("User-Agent",
+				"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36");
+		connection.setRequestProperty("Upgrade-Insecure-Requests", "100");
+		connection.setRequestProperty("Accept",
+				"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+		connection.setRequestProperty("Connection", "keep-alive");
+		connection.setRequestProperty("Accept-Encoding", "gzip, deflate, sdch");
+		connection.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.8");
+		connection.setRequestProperty("Cookie", "kuaichuanid=7737D93877EE6FEA2110BB086960418B"); // thunder
+
 	}
 
 	// log.info("!!!!!!!Thread name: {}, start: {}, end:

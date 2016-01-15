@@ -90,7 +90,7 @@ public final class ForkJoinDownload {
 		}
 
 		if (args.length > 3 && (args[4] != null || !args[4].isEmpty())) {
-			useHeader = true;
+			useHeader = true;  
 		}
 
 		final URL url = new URL(downloadURL);

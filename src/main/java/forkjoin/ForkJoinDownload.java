@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * "http://184.164.76.104/pukiwiki.20150612.tar.gz");
  * "http://speed.myzone.cn/pc_elive_1.1.rar");
  * "http://down.360safe.com/cse/360cse_8.5.0.126.exe"); <br>
+  * "http://down.360safe.com/cse/360cse_8.5.0.126.exe"); <br>
+  *  * "http://down.360safe.com/cse/360cse_8.5.0.126.exe"); <br>
  * 
  * ForkJoin download
  * 

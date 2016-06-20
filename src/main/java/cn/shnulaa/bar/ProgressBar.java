@@ -24,6 +24,13 @@ public class ProgressBar {
 		bar.append("]");
 		return bar.toString();
 	}
-	
+
+	public static void main(String[] args) {
+
+		for (int i = 0; i < 100; i++) {
+			System.out.println(showBarByPoint(i, 100, 10, i, true));
+		}
+
+	}
 
 }

@@ -20,7 +20,7 @@ import cn.shnulaa.worker.SnapshotWorker;
  * "https://github.com/hashem78/android_hardware_qcom_gps/archive/msm8x94.zip");
  * "http://184.164.76.104/pukiwiki.20150612.tar.gz");
  * "http://speed.myzone.cn/pc_elive_1.1.rar");
- * "http://down.360safe.com/cse/360cse_8.5.0.126.exe"); <br>
+ * 	"); <br>
  * "http://down.360safe.com/cse/360cse_8.5.0.126.exe"); <br>
  * * "http://down.360safe.com/cse/360cse_8.5.0.126.exe"); <br>
  * 
@@ -36,7 +36,7 @@ public final class ForkJoinDownload {
 	/** ForkJoinPool pool size **/
 	private static final int POOL_SIZE = 15;
 
-	private static boolean useHeader = false;
+	// private static boolean useHeader = false;
 
 	/** the instance of Manager **/
 	private static final Manager m = Manager.getInstance();
@@ -50,8 +50,7 @@ public final class ForkJoinDownload {
 	public static void main(String[] args) throws Throwable {
 		if (args == null || args.length < 3) {
 			System.err.println("argument error..");
-			System.err.println(
-					"usage: java -jar [XX.jar] [downloadUrl] [threadNumber] [savedPath] [savedName] [use header]");
+			System.err.println("usage: java -jar [XX.jar] [downloadUrl] [threadNumber] [savedPath] [savedName]");
 			return;
 		}
 
@@ -78,9 +77,9 @@ public final class ForkJoinDownload {
 			fileName = args[3];
 		}
 
-		if (args.length > 3 && (args[4] != null || !args[4].isEmpty())) {
-			useHeader = true;
-		}
+		// if (args.length > 3 && (args[4] != null || !args[4].isEmpty())) {
+		// useHeader = true;
+		// }
 
 		final URL url = new URL(downloadURL);
 		HttpURLConnection.setFollowRedirects(true);
@@ -140,6 +139,7 @@ public final class ForkJoinDownload {
 				}
 
 				System.out.print(ProgressBar.showBarByPoint(100, 100, 70, m.getPerSecondSpeed(), true));
+				System.out.flush();
 				long end = System.currentTimeMillis();
 				System.out.println("cost time: " + (end - start) / 1000 + "s");
 			} else {

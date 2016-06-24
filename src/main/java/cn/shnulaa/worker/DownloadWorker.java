@@ -5,17 +5,24 @@ import java.io.File;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicLong;
 
 import cn.shnulaa.manager.Manager;
 
+/**
+ * DownloadWorker extends RecursiveAction <br>
+ * get stream from the URL with header Range bytes=start-end <br>
+ * This worker only download the range with specified start <br>
+ * and end position
+ * 
+ * @author liuyq
+ */
 public class DownloadWorker extends RecursiveAction {
 
 	/** the default forkJoin thresholds **/
-	private static final long THRESHOLDS = (1024 * 1024 * 10); // 1M
+	private static final long THRESHOLDS = (1024 * 1024 * 5); // 5M
 	/** one thread download connection timeout **/
 	private static final int THREAD_DOWNLOAD_TIMEOUT = 30000;
 	/** one thread download max retry count **/
@@ -28,13 +35,20 @@ public class DownloadWorker extends RecursiveAction {
 	 */
 	private static final long serialVersionUID = -8469875906879091144L;
 
-	private String key;
-	private long start;
-	private long end;
-	private URL url;
-	private File dFile;
-	private AtomicLong current;
+	private String key; // (start - end)
+	private long start; // the start position to download
+	private long end; // the end position to download
+	private URL url; // the URL will be download
+	private File dFile; // the desc file to be saved
+	private AtomicLong current; // the current position
 
+	/**
+	 * 
+	 * @param start
+	 * @param end
+	 * @param url
+	 * @param dFile
+	 */
 	public DownloadWorker(long start, long end, URL url, File dFile) {
 		this.start = start;
 		this.current = new AtomicLong(start);
@@ -71,18 +85,17 @@ public class DownloadWorker extends RecursiveAction {
 		}
 	}
 
+	/**
+	 * 
+	 * 
+	 */
 	private void execute() {
 		int retryCount = 0;
 		while (retryCount++ < THREAD_MAX_RETRY_COUNT) {
 			HttpURLConnection con = null;
 			HttpURLConnection.setFollowRedirects(true);
 			try {
-
 				con = (HttpURLConnection) url.openConnection();
-
-				// if (useHeader) {
-				// addHeader(con);
-				// }
 				con.setReadTimeout(THREAD_DOWNLOAD_TIMEOUT);
 				con.setConnectTimeout(THREAD_DOWNLOAD_TIMEOUT);
 
@@ -90,12 +103,9 @@ public class DownloadWorker extends RecursiveAction {
 					// System.err.println("Already complete..");
 					return;
 				}
-				// System.out.println("bytes=" + getCurrent() + "-" + end);
+
 				con.setRequestProperty("Range", "bytes=" + getCurrent() + "-" + end);
-				// System.out.println("Thread name:" +
-				// Thread.currentThread().getName() + ", Ready to get
-				// bytes="
-				// + getCurrent() + "-" + end);
+
 				try (BufferedInputStream bis = new BufferedInputStream(con.getInputStream());
 						RandomAccessFile file = new RandomAccessFile(dFile, "rw");) {
 					file.seek(getCurrent());
@@ -107,11 +117,6 @@ public class DownloadWorker extends RecursiveAction {
 						current.getAndAdd(readed);
 						m.alreadyRead.getAndAdd(readed);
 					}
-					// System.out.println("Thread name:" +
-					// Thread.currentThread().getName() + ", end to get
-					// bytes="
-					// + getCurrent() + "-" + end);
-					// if write file successfully
 					break;
 				} catch (Exception e) {
 					System.err.println("exception occurred while download..");
@@ -152,17 +157,19 @@ public class DownloadWorker extends RecursiveAction {
 	public String getKey() {
 		return key;
 	}
-
-	private static void addHeader(URLConnection connection) {
-		connection.setRequestProperty("User-Agent",
-				"Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36");
-		connection.setRequestProperty("Upgrade-Insecure-Requests", "100");
-		connection.setRequestProperty("Accept",
-				"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-		connection.setRequestProperty("Connection", "keep-alive");
-		connection.setRequestProperty("Accept-Encoding", "gzip, deflate, sdch");
-		connection.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.8");
-		connection.setRequestProperty("Cookie", "kuaichuanid=7737D93877EE6FEA2110BB086960418B"); // thunder
-
-	}
+	//
+	// private static void addHeader(URLConnection connection) {
+	// connection.setRequestProperty("User-Agent",
+	// "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like
+	// Gecko) Chrome/47.0.2526.106 Safari/537.36");
+	// connection.setRequestProperty("Upgrade-Insecure-Requests", "100");
+	// connection.setRequestProperty("Accept",
+	// "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+	// connection.setRequestProperty("Connection", "keep-alive");
+	// connection.setRequestProperty("Accept-Encoding", "gzip, deflate, sdch");
+	// connection.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.8");
+	// connection.setRequestProperty("Cookie",
+	// "kuaichuanid=7737D93877EE6FEA2110BB086960418B"); // thunder
+	//
+	// }
 }

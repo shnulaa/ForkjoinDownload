@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import cn.shnulaa.worker.DownloadWorker;
 
 /**
- * Manager
+ * Manager the DownloadWorker
  * 
  * @author liuyq
  * 
